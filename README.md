@@ -95,6 +95,10 @@ All admin commands are accessed via `/[gamemode] admin verticalborder` (or `/[ga
 
 If [PlaceholderAPI](https://github.com/PlaceholderAPI/PlaceholderAPI) is installed, the following placeholders are available:
 
+### Self-Referencing Placeholders
+
+These return values for the requesting player's own island:
+
 | Placeholder | Description | Example Output |
 |-------------|-------------|----------------|
 | `%verticalborder_top_y%` | Top Y boundary (ceiling) for the player's island | `320` |
@@ -104,7 +108,26 @@ If [PlaceholderAPI](https://github.com/PlaceholderAPI/PlaceholderAPI) is install
 | `%verticalborder_border_enabled%` | Whether border is enabled for the island | `true` |
 | `%verticalborder_height_range%` | Total height range (top - bottom) | `384` |
 
-**Note:** Placeholders check the player's owned island first, then fall back to the island they're standing on. If no island is found, default values from the config are returned.
+### Player-Specific Placeholders
+
+These allow looking up values for a specific player's island - useful for leaderboards and custom displays:
+
+| Placeholder | Description | Example |
+|-------------|-------------|---------|
+| `%verticalborder_top_y_<player>%` | Top Y for specified player's island | `%verticalborder_top_y_Steve%` |
+| `%verticalborder_bottom_y_<player>%` | Bottom Y for specified player's island | `%verticalborder_bottom_y_Steve%` |
+| `%verticalborder_height_range_<player>%` | Height range for specified player's island | `%verticalborder_height_range_Steve%` |
+| `%verticalborder_ceiling_enabled_<player>%` | Ceiling status for specified player | `%verticalborder_ceiling_enabled_Steve%` |
+| `%verticalborder_floor_enabled_<player>%` | Floor status for specified player | `%verticalborder_floor_enabled_Steve%` |
+| `%verticalborder_border_enabled_<player>%` | Border status for specified player | `%verticalborder_border_enabled_Steve%` |
+
+**Example Use Case:** Creating a top 10 leaderboard showing players with the highest vertical borders:
+```
+1. Steve - %verticalborder_top_y_Steve% blocks
+2. Alex - %verticalborder_top_y_Alex% blocks
+```
+
+**Note:** Self-referencing placeholders check the player's owned island first, then fall back to the island they're standing on. If no island is found, default values from the config are returned.
 
 ## How It Works
 
