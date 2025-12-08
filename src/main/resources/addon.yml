@@ -1,0 +1,7 @@
+name: VerticalBorder
+main: world.bentobox.verticalborder.VerticalBorderAddon
+version: ${project.version}
+api-version: 2.7.1
+authors: [Developer]
+softdepend: [FastAsyncWorldEdit]
+description: Vertical Y-axis borders for BentoBox islands using barrier blocks

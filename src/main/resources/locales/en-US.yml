@@ -1,0 +1,79 @@
+---
+verticalborder:
+  # General translations
+  enabled: "&aEnabled"
+  disabled: "&cDisabled"
+
+  # Messages shown to players
+  messages:
+    hit-ceiling: "&cYou hit the vertical border ceiling!"
+    hit-floor: "&cYou hit the vertical border floor!"
+
+  # Admin command translations
+  admin:
+    description: "Manage vertical borders for islands"
+
+    setheight:
+      description: "Set the vertical border height for a player's island"
+      parameters: "<player> <top|bottom> <y-value>"
+      success: "&aSuccessfully set [type] border to Y=[value] for [name]'s island."
+      invalid-type: "&cInvalid type. Use 'top' or 'bottom'."
+      invalid-number: "&cInvalid number. Please enter a valid Y coordinate."
+      out-of-bounds: "&cY value must be between -64 and 320."
+      top-below-bottom: "&cTop border cannot be at or below the bottom border."
+      bottom-above-top: "&cBottom border cannot be at or above the top border."
+
+    adjustheight:
+      description: "Adjust the vertical border height by adding or subtracting"
+      parameters: "<player> <top|bottom> <adjustment>"
+      success: "&aSuccessfully adjusted [type] border by [adjustment] to Y=[new_value] for [name]'s island."
+      invalid-type: "&cInvalid type. Use 'top' or 'bottom'."
+      invalid-number: "&cInvalid number. Please enter a valid adjustment value (e.g., 20 or -20)."
+      out-of-bounds: "&cAdjustment would result in invalid Y value. Current: [current], Adjustment: [adjustment], Result: [result]. Must be between -64 and 320."
+
+    reload:
+      description: "Reload the VerticalBorder configuration"
+      success: "&aVerticalBorder configuration reloaded successfully!"
+
+    info:
+      description: "View vertical border information for a player's island"
+      parameters: "<player>"
+      header: "&6=== Vertical Border Info for [name] ==="
+      enabled: "&7Border Status: [status]"
+      ceiling: "&7Ceiling: Y=[y] ([status])"
+      floor: "&7Floor: Y=[y] ([status])"
+
+    toggle:
+      description: "Toggle vertical border settings for a player's island"
+      parameters: "<player> <all|ceiling|floor>"
+      invalid-type: "&cInvalid type. Use 'all', 'ceiling', or 'floor'."
+      all:
+        success: "&aVertical border for [name]'s island is now [status]."
+      ceiling:
+        success: "&aCeiling border for [name]'s island is now [status]."
+      floor:
+        success: "&aFloor border for [name]'s island is now [status]."
+
+    update:
+      description: "Update vertical border location after island has been moved"
+      parameters: "<player>"
+      border-disabled: "&cThe vertical border is disabled for this island."
+      no-old-location: "&eNo previous location data found. Placing barriers at current location."
+      no-change: "&eThe island location has not changed. No update needed."
+      updating: "&7Updating border for [name]'s island from (&e[old_x], [old_z]&7) to (&a[new_x], [new_z]&7)..."
+      placed-new: "&aPlaced barriers at current location (&e[x], [z]&a) for [name]'s island."
+      success: "&aSuccessfully updated border location to (&e[x], [z]&a) for [name]'s island."
+      error: "&cAn error occurred while updating the border location."
+
+  # Player command translations
+  player:
+    description: "View or toggle your island's vertical border"
+
+    info:
+      header: "&6=== Your Island's Vertical Border ==="
+      enabled: "&7Border Status: [status]"
+      ceiling: "&7Ceiling: Y=[y]"
+      floor: "&7Floor: Y=[y]"
+
+    toggle:
+      success: "&aYour island's vertical border is now [status]."

@@ -1,0 +1,56 @@
+# VerticalBorder Configuration
+#
+# This addon creates vertical Y-axis borders for BentoBox islands
+# using barrier blocks placed via FastAsyncWorldEdit.
+
+# Default Y-axis boundaries for new islands
+defaults:
+  # Default top Y boundary (ceiling) for new islands
+  top-y: 320
+  # Default bottom Y boundary (floor) for new islands
+  bottom-y: -64
+  # Enable ceiling border by default for new islands
+  ceiling-enabled: true
+  # Enable floor border by default for new islands
+  floor-enabled: true
+
+# Particle visualization settings
+particles:
+  # Enable particle visualization near borders
+  enabled: true
+  # Particle update interval in ticks (20 = 1 second)
+  interval: 10
+  # Distance from border to start showing particles
+  warning-distance: 8
+  # Particle type to display (see Bukkit Particle enum)
+  # Examples: DUST, FLAME, SOUL_FIRE_FLAME, END_ROD, HEART, VILLAGER_HAPPY
+  # For colored dust, use: DUST
+  type: DUST
+  # Radius around player to display particles
+  display-radius: 5
+  # Dust particle color (only used when type is DUST)
+  # RGB values from 0-255
+  dust-color:
+    red: 0
+    green: 100
+    blue: 255
+  # Dust particle size (only used when type is DUST)
+  dust-size: 1.0
+
+# Border enforcement settings
+enforcement:
+  # Teleport players back when they breach the border
+  teleport-back: true
+  # Distance to teleport player back from border
+  teleport-distance: 2
+
+# Barrier block settings
+barriers:
+  # Regenerate barriers when chunks load
+  regenerate-on-chunk-load: true
+  # Enable barrier block placement (requires FAWE)
+  place-barrier-blocks: true
+
+# Game modes where this addon is disabled
+# Add game mode names to disable (e.g., BSkyBlock, AcidIsland)
+disabled-gamemodes: []
