@@ -11,6 +11,7 @@ A BentoBox addon that adds vertical (Y-axis) boundaries to island borders using 
 - **Admin Controls** - Full command suite for server administrators
 - **Player Toggle** - Players can toggle their border visibility
 - **Automatic Regeneration** - Barriers regenerate on chunk load to ensure persistence
+- **PlaceholderAPI Support** - Display border values in scoreboards, holograms, and more
 
 ## Requirements
 
@@ -18,6 +19,7 @@ A BentoBox addon that adds vertical (Y-axis) boundaries to island borders using 
 |------------|---------|----------|
 | [BentoBox](https://github.com/BentoBoxWorld/BentoBox) | 2.7.1+ | Yes |
 | [FastAsyncWorldEdit](https://github.com/IntellectualSites/FastAsyncWorldEdit) | 2.11.1+ | Yes |
+| [PlaceholderAPI](https://github.com/PlaceholderAPI/PlaceholderAPI) | 2.11.6+ | No (Optional) |
 | Java | 21+ | Yes |
 | Minecraft | 1.21.1 | Yes |
 
@@ -89,6 +91,21 @@ All admin commands are accessed via `/[gamemode] admin verticalborder` (or `/[ga
 
 **Example:** For BSkyBlock, use `/bsb admin vb setheight Steve top 256`
 
+## PlaceholderAPI Placeholders
+
+If [PlaceholderAPI](https://github.com/PlaceholderAPI/PlaceholderAPI) is installed, the following placeholders are available:
+
+| Placeholder | Description | Example Output |
+|-------------|-------------|----------------|
+| `%verticalborder_top_y%` | Top Y boundary (ceiling) for the player's island | `320` |
+| `%verticalborder_bottom_y%` | Bottom Y boundary (floor) for the player's island | `-64` |
+| `%verticalborder_ceiling_enabled%` | Whether ceiling border is enabled | `true` |
+| `%verticalborder_floor_enabled%` | Whether floor border is enabled | `true` |
+| `%verticalborder_border_enabled%` | Whether border is enabled for the island | `true` |
+| `%verticalborder_height_range%` | Total height range (top - bottom) | `384` |
+
+**Note:** Placeholders check the player's owned island first, then fall back to the island they're standing on. If no island is found, default values from the config are returned.
+
 ## How It Works
 
 1. **Island Creation** - When an island is created, the addon automatically places invisible barrier blocks at the configured ceiling and floor Y-levels across the island's protection area.
@@ -145,6 +162,8 @@ src/main/java/world/bentobox/verticalborder/
 ├── commands/
 │   ├── PlayerBorderCommand.java      # Player toggle command
 │   └── admin/                        # Admin command suite
+├── placeholders/
+│   └── VerticalBorderPlaceholders.java  # PlaceholderAPI integration
 └── tasks/
     └── BorderParticleTask.java       # Particle visualization
 ```

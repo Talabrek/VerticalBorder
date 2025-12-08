@@ -11,6 +11,7 @@ import world.bentobox.verticalborder.listeners.IslandEventListener;
 import world.bentobox.verticalborder.listeners.PlayerMoveListener;
 import world.bentobox.verticalborder.managers.BorderDataManager;
 import world.bentobox.verticalborder.managers.FAWEBarrierManager;
+import world.bentobox.verticalborder.placeholders.VerticalBorderPlaceholders;
 import world.bentobox.verticalborder.tasks.BorderParticleTask;
 
 /**
@@ -23,7 +24,9 @@ public class VerticalBorderAddon extends Addon {
     private BorderDataManager dataManager;
     private FAWEBarrierManager barrierManager;
     private BorderParticleTask particleTask;
+    private VerticalBorderPlaceholders placeholderExpansion;
     private boolean faweEnabled = false;
+    private boolean placeholderApiEnabled = false;
 
     @Override
     public void onLoad() {
@@ -73,6 +76,16 @@ public class VerticalBorderAddon extends Addon {
         if (settings.isParticlesEnabled()) {
             particleTask = new BorderParticleTask(this);
             particleTask.runTaskTimer(getPlugin(), 20L, settings.getParticleInterval());
+        }
+
+        // Register PlaceholderAPI expansion if available
+        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            placeholderApiEnabled = true;
+            placeholderExpansion = new VerticalBorderPlaceholders(this);
+            placeholderExpansion.register();
+            log("PlaceholderAPI found! Placeholders registered.");
+        } else {
+            log("PlaceholderAPI not found. Placeholders disabled.");
         }
 
         log("VerticalBorder addon enabled successfully!");
@@ -146,5 +159,13 @@ public class VerticalBorderAddon extends Addon {
      */
     public boolean isFaweEnabled() {
         return faweEnabled;
+    }
+
+    /**
+     * Check if PlaceholderAPI is enabled.
+     * @return true if PlaceholderAPI is available
+     */
+    public boolean isPlaceholderApiEnabled() {
+        return placeholderApiEnabled;
     }
 }
