@@ -85,6 +85,105 @@ public class FAWEBarrierManager {
     }
 
     /**
+     * Fill a 3D volume with barrier blocks (replacing only air).
+     * @param bukkitWorld The world to place barriers in
+     * @param minX Minimum X coordinate
+     * @param maxX Maximum X coordinate
+     * @param minY Minimum Y coordinate
+     * @param maxY Maximum Y coordinate
+     * @param minZ Minimum Z coordinate
+     * @param maxZ Maximum Z coordinate
+     * @return CompletableFuture with the number of blocks changed
+     */
+    public CompletableFuture<Integer> fillVolumeWithBarriers(
+            World bukkitWorld, int minX, int maxX, int minY, int maxY, int minZ, int maxZ) {
+
+        if (!addon.isFaweEnabled() || !addon.getSettings().isPlaceBarrierBlocks()) {
+            return CompletableFuture.completedFuture(0);
+        }
+
+        CompletableFuture<Integer> future = new CompletableFuture<>();
+
+        Bukkit.getScheduler().runTaskAsynchronously(addon.getPlugin(), () -> {
+            try {
+                com.sk89q.worldedit.world.World world = BukkitAdapter.adapt(bukkitWorld);
+                BlockVector3 min = BlockVector3.at(minX, minY, minZ);
+                BlockVector3 max = BlockVector3.at(maxX, maxY, maxZ);
+                CuboidRegion region = new CuboidRegion(world, min, max);
+
+                try (EditSession session = WorldEdit.getInstance()
+                        .newEditSessionBuilder()
+                        .world(world)
+                        .maxBlocks(-1)
+                        .build()) {
+
+                    // Only replace air blocks with barriers
+                    Mask airMask = new BlockTypeMask(session,
+                            BlockTypes.AIR, BlockTypes.CAVE_AIR, BlockTypes.VOID_AIR);
+                    BlockState barrier = BlockTypes.BARRIER.getDefaultState();
+
+                    int changed = session.replaceBlocks(region, airMask, barrier);
+                    future.complete(changed);
+                }
+            } catch (Exception e) {
+                addon.logError("Error filling volume with barriers: " + e.getMessage());
+                future.completeExceptionally(e);
+            }
+        });
+
+        return future;
+    }
+
+    /**
+     * Remove barrier blocks from a 3D volume.
+     * @param bukkitWorld The world to remove barriers from
+     * @param minX Minimum X coordinate
+     * @param maxX Maximum X coordinate
+     * @param minY Minimum Y coordinate
+     * @param maxY Maximum Y coordinate
+     * @param minZ Minimum Z coordinate
+     * @param maxZ Maximum Z coordinate
+     * @return CompletableFuture with the number of blocks changed
+     */
+    public CompletableFuture<Integer> removeBarriersFromVolume(
+            World bukkitWorld, int minX, int maxX, int minY, int maxY, int minZ, int maxZ) {
+
+        if (!addon.isFaweEnabled()) {
+            return CompletableFuture.completedFuture(0);
+        }
+
+        CompletableFuture<Integer> future = new CompletableFuture<>();
+
+        Bukkit.getScheduler().runTaskAsynchronously(addon.getPlugin(), () -> {
+            try {
+                com.sk89q.worldedit.world.World world = BukkitAdapter.adapt(bukkitWorld);
+                BlockVector3 min = BlockVector3.at(minX, minY, minZ);
+                BlockVector3 max = BlockVector3.at(maxX, maxY, maxZ);
+                CuboidRegion region = new CuboidRegion(world, min, max);
+
+                try (EditSession session = WorldEdit.getInstance()
+                        .newEditSessionBuilder()
+                        .world(world)
+                        .maxBlocks(-1)
+                        .build()) {
+
+                    // Only remove barrier blocks
+                    Mask barrierMask = new BlockTypeMask(session, BlockTypes.BARRIER);
+                    BlockState air = BlockTypes.AIR.getDefaultState();
+
+                    int changed = session.replaceBlocks(region, barrierMask, air);
+                    future.complete(changed);
+                }
+            } catch (Exception e) {
+                addon.logError("Error removing barriers from volume: " + e.getMessage());
+                future.completeExceptionally(e);
+            }
+        });
+
+        return future;
+    }
+
+    /**
      * Remove barrier blocks from a horizontal plane at a specific Y level.
      * @param bukkitWorld The world to remove barriers from
      * @param minX Minimum X coordinate
@@ -133,7 +232,9 @@ public class FAWEBarrierManager {
     }
 
     /**
-     * Create barriers for an island (ceiling and floor).
+     * Create barriers for an island.
+     * Fills all air blocks above the ceiling (to world max) and below the floor (to world min)
+     * with barrier blocks to prevent access and mob spawning.
      * @param island The island to create barriers for
      * @param data The border data for the island
      */
@@ -155,9 +256,13 @@ public class FAWEBarrierManager {
         int minZ = center.getBlockZ() - range;
         int maxZ = center.getBlockZ() + range;
 
-        // Place ceiling barrier
+        // World height limits
+        int worldMinY = world.getMinHeight();
+        int worldMaxY = world.getMaxHeight() - 1;
+
+        // Fill volume above the ceiling (from topY to world max)
         if (data.isCeilingEnabled()) {
-            placeHorizontalBarrierPlane(world, minX, maxX, minZ, maxZ, data.getTopY())
+            fillVolumeWithBarriers(world, minX, maxX, data.getTopY(), worldMaxY, minZ, maxZ)
                 .thenAccept(count -> {
                     if (count > 0) {
                         addon.log("Placed " + count + " ceiling barriers for island " + island.getUniqueId());
@@ -165,9 +270,9 @@ public class FAWEBarrierManager {
                 });
         }
 
-        // Place floor barrier
+        // Fill volume below the floor (from world min to bottomY)
         if (data.isFloorEnabled()) {
-            placeHorizontalBarrierPlane(world, minX, maxX, minZ, maxZ, data.getBottomY())
+            fillVolumeWithBarriers(world, minX, maxX, worldMinY, data.getBottomY(), minZ, maxZ)
                 .thenAccept(count -> {
                     if (count > 0) {
                         addon.log("Placed " + count + " floor barriers for island " + island.getUniqueId());
@@ -177,7 +282,8 @@ public class FAWEBarrierManager {
     }
 
     /**
-     * Remove barriers for an island (ceiling and floor).
+     * Remove barriers for an island.
+     * Removes all barrier blocks from the volumes above the ceiling and below the floor.
      * @param island The island to remove barriers from
      * @param data The border data for the island
      */
@@ -195,29 +301,30 @@ public class FAWEBarrierManager {
         int minZ = center.getBlockZ() - range;
         int maxZ = center.getBlockZ() + range;
 
-        // Remove ceiling barrier
-        if (data.isCeilingEnabled()) {
-            removeBarrierPlane(world, minX, maxX, minZ, maxZ, data.getTopY())
-                .thenAccept(count -> {
-                    if (count > 0) {
-                        addon.log("Removed " + count + " ceiling barriers for island " + island.getUniqueId());
-                    }
-                });
-        }
+        // World height limits
+        int worldMinY = world.getMinHeight();
+        int worldMaxY = world.getMaxHeight() - 1;
 
-        // Remove floor barrier
-        if (data.isFloorEnabled()) {
-            removeBarrierPlane(world, minX, maxX, minZ, maxZ, data.getBottomY())
-                .thenAccept(count -> {
-                    if (count > 0) {
-                        addon.log("Removed " + count + " floor barriers for island " + island.getUniqueId());
-                    }
-                });
-        }
+        // Remove ceiling barriers (from topY to world max)
+        removeBarriersFromVolume(world, minX, maxX, data.getTopY(), worldMaxY, minZ, maxZ)
+            .thenAccept(count -> {
+                if (count > 0) {
+                    addon.log("Removed " + count + " ceiling barriers for island " + island.getUniqueId());
+                }
+            });
+
+        // Remove floor barriers (from world min to bottomY)
+        removeBarriersFromVolume(world, minX, maxX, worldMinY, data.getBottomY(), minZ, maxZ)
+            .thenAccept(count -> {
+                if (count > 0) {
+                    addon.log("Removed " + count + " floor barriers for island " + island.getUniqueId());
+                }
+            });
     }
 
     /**
      * Update barriers for an island (removes old and places new).
+     * Handles height adjustments by removing old volume and placing new volume.
      * @param island The island to update barriers for
      * @param data The border data for the island
      * @param oldTopY The old ceiling Y level (for removal)
@@ -237,15 +344,28 @@ public class FAWEBarrierManager {
         int minZ = center.getBlockZ() - range;
         int maxZ = center.getBlockZ() + range;
 
-        // Remove old barriers and place new ones
+        // World height limits
+        int worldMinY = world.getMinHeight();
+        int worldMaxY = world.getMaxHeight() - 1;
+
+        // Update ceiling barriers if height changed
         if (data.isCeilingEnabled() && oldTopY != data.getTopY()) {
-            removeBarrierPlane(world, minX, maxX, minZ, maxZ, oldTopY)
-                .thenRun(() -> placeHorizontalBarrierPlane(world, minX, maxX, minZ, maxZ, data.getTopY()));
+            // Remove old ceiling volume (from oldTopY to world max)
+            removeBarriersFromVolume(world, minX, maxX, oldTopY, worldMaxY, minZ, maxZ)
+                .thenRun(() -> {
+                    // Place new ceiling volume (from new topY to world max)
+                    fillVolumeWithBarriers(world, minX, maxX, data.getTopY(), worldMaxY, minZ, maxZ);
+                });
         }
 
+        // Update floor barriers if height changed
         if (data.isFloorEnabled() && oldBottomY != data.getBottomY()) {
-            removeBarrierPlane(world, minX, maxX, minZ, maxZ, oldBottomY)
-                .thenRun(() -> placeHorizontalBarrierPlane(world, minX, maxX, minZ, maxZ, data.getBottomY()));
+            // Remove old floor volume (from world min to oldBottomY)
+            removeBarriersFromVolume(world, minX, maxX, worldMinY, oldBottomY, minZ, maxZ)
+                .thenRun(() -> {
+                    // Place new floor volume (from world min to new bottomY)
+                    fillVolumeWithBarriers(world, minX, maxX, worldMinY, data.getBottomY(), minZ, maxZ);
+                });
         }
     }
 
@@ -274,6 +394,10 @@ public class FAWEBarrierManager {
 
         World world = island.getWorld();
 
+        // World height limits
+        int worldMinY = world.getMinHeight();
+        int worldMaxY = world.getMaxHeight() - 1;
+
         // Calculate old location bounds
         int oldMinX = oldCenterX - oldProtectionRange;
         int oldMaxX = oldCenterX + oldProtectionRange;
@@ -290,11 +414,11 @@ public class FAWEBarrierManager {
 
         CompletableFuture<Void> result = new CompletableFuture<>();
 
-        // First, remove barriers from old location
+        // First, remove barriers from old location (volumes)
         CompletableFuture<Void> removalFuture = CompletableFuture.allOf();
 
         if (data.isCeilingEnabled()) {
-            CompletableFuture<Integer> ceilingRemoval = removeBarrierPlane(world, oldMinX, oldMaxX, oldMinZ, oldMaxZ, data.getTopY());
+            CompletableFuture<Integer> ceilingRemoval = removeBarriersFromVolume(world, oldMinX, oldMaxX, data.getTopY(), worldMaxY, oldMinZ, oldMaxZ);
             ceilingRemoval.thenAccept(count -> {
                 if (count > 0) {
                     addon.log("Removed " + count + " ceiling barriers from old location for island " + island.getUniqueId());
@@ -304,7 +428,7 @@ public class FAWEBarrierManager {
         }
 
         if (data.isFloorEnabled()) {
-            CompletableFuture<Integer> floorRemoval = removeBarrierPlane(world, oldMinX, oldMaxX, oldMinZ, oldMaxZ, data.getBottomY());
+            CompletableFuture<Integer> floorRemoval = removeBarriersFromVolume(world, oldMinX, oldMaxX, worldMinY, data.getBottomY(), oldMinZ, oldMaxZ);
             floorRemoval.thenAccept(count -> {
                 if (count > 0) {
                     addon.log("Removed " + count + " floor barriers from old location for island " + island.getUniqueId());
@@ -313,10 +437,10 @@ public class FAWEBarrierManager {
             removalFuture = CompletableFuture.allOf(removalFuture, floorRemoval);
         }
 
-        // After removal completes, place barriers at new location
+        // After removal completes, place barriers at new location (volumes)
         removalFuture.thenRun(() -> {
             if (data.isCeilingEnabled()) {
-                placeHorizontalBarrierPlane(world, newMinX, newMaxX, newMinZ, newMaxZ, data.getTopY())
+                fillVolumeWithBarriers(world, newMinX, newMaxX, data.getTopY(), worldMaxY, newMinZ, newMaxZ)
                     .thenAccept(count -> {
                         if (count > 0) {
                             addon.log("Placed " + count + " ceiling barriers at new location for island " + island.getUniqueId());
@@ -325,7 +449,7 @@ public class FAWEBarrierManager {
             }
 
             if (data.isFloorEnabled()) {
-                placeHorizontalBarrierPlane(world, newMinX, newMaxX, newMinZ, newMaxZ, data.getBottomY())
+                fillVolumeWithBarriers(world, newMinX, newMaxX, worldMinY, data.getBottomY(), newMinZ, newMaxZ)
                     .thenAccept(count -> {
                         if (count > 0) {
                             addon.log("Placed " + count + " floor barriers at new location for island " + island.getUniqueId());
@@ -345,6 +469,7 @@ public class FAWEBarrierManager {
 
     /**
      * Place barriers for a specific chunk region within an island.
+     * Fills volumes above ceiling and below floor within the chunk bounds.
      * @param world The world
      * @param chunkMinX Chunk minimum X coordinate
      * @param chunkMaxX Chunk maximum X coordinate
@@ -361,12 +486,18 @@ public class FAWEBarrierManager {
             return;
         }
 
+        // World height limits
+        int worldMinY = world.getMinHeight();
+        int worldMaxY = world.getMaxHeight() - 1;
+
+        // Fill volume above ceiling
         if (data.isCeilingEnabled()) {
-            placeHorizontalBarrierPlane(world, chunkMinX, chunkMaxX, chunkMinZ, chunkMaxZ, data.getTopY());
+            fillVolumeWithBarriers(world, chunkMinX, chunkMaxX, data.getTopY(), worldMaxY, chunkMinZ, chunkMaxZ);
         }
 
+        // Fill volume below floor
         if (data.isFloorEnabled()) {
-            placeHorizontalBarrierPlane(world, chunkMinX, chunkMaxX, chunkMinZ, chunkMaxZ, data.getBottomY());
+            fillVolumeWithBarriers(world, chunkMinX, chunkMaxX, worldMinY, data.getBottomY(), chunkMinZ, chunkMaxZ);
         }
     }
 }

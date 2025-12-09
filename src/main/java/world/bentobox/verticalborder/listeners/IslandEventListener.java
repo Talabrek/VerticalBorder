@@ -34,12 +34,14 @@ public class IslandEventListener implements Listener {
     public void onIslandCreated(IslandCreatedEvent event) {
         Island island = event.getIsland();
 
-        // Create new border data with defaults
+        // Create new border data with defaults from config
         BorderIslandData data = new BorderIslandData(
             island.getUniqueId(),
             addon.getSettings().getDefaultTopY(),
             addon.getSettings().getDefaultBottomY()
         );
+        data.setCeilingEnabled(addon.getSettings().isDefaultCeilingEnabled());
+        data.setFloorEnabled(addon.getSettings().isDefaultFloorEnabled());
 
         // Store the current island location for future reference
         data.updateLocation(
@@ -95,12 +97,14 @@ public class IslandEventListener implements Listener {
             addon.getBarrierManager().removeBordersForIsland(island, oldData);
         }
 
-        // Create new border data with defaults
+        // Create new border data with defaults from config
         BorderIslandData newData = new BorderIslandData(
             islandId,
             addon.getSettings().getDefaultTopY(),
             addon.getSettings().getDefaultBottomY()
         );
+        newData.setCeilingEnabled(addon.getSettings().isDefaultCeilingEnabled());
+        newData.setFloorEnabled(addon.getSettings().isDefaultFloorEnabled());
 
         // Store the current island location for future reference
         newData.updateLocation(

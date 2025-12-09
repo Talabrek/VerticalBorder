@@ -101,47 +101,41 @@ public class UpdateCommand extends CompositeCommand {
             return true;
         }
 
-        // Check if location has actually changed
+        // Get old location data for removal
         int oldCenterX = data.getLastCenterX();
         int oldCenterZ = data.getLastCenterZ();
         int oldRange = data.getLastProtectionRange();
 
-        if (oldCenterX == newCenterX && oldCenterZ == newCenterZ && oldRange == newRange) {
-            user.sendMessage("verticalborder.admin.update.no-change");
-            return false;
-        }
+        boolean locationChanged = oldCenterX != newCenterX || oldCenterZ != newCenterZ || oldRange != newRange;
 
         // Notify user that update is in progress
-        user.sendMessage("verticalborder.admin.update.updating",
-            "[old_x]", String.valueOf(oldCenterX),
-            "[old_z]", String.valueOf(oldCenterZ),
-            "[new_x]", String.valueOf(newCenterX),
-            "[new_z]", String.valueOf(newCenterZ),
-            TextVariables.NAME, args.get(0));
+        if (locationChanged) {
+            user.sendMessage("verticalborder.admin.update.updating",
+                "[old_x]", String.valueOf(oldCenterX),
+                "[old_z]", String.valueOf(oldCenterZ),
+                "[new_x]", String.valueOf(newCenterX),
+                "[new_z]", String.valueOf(newCenterZ),
+                TextVariables.NAME, args.get(0));
+        } else {
+            user.sendMessage("verticalborder.admin.update.refreshing",
+                "[x]", String.valueOf(newCenterX),
+                "[z]", String.valueOf(newCenterZ),
+                TextVariables.NAME, args.get(0));
+        }
 
-        // Update the border location (removes old barriers, places new ones)
+        // Remove old barriers and place new ones (always refresh, even if location unchanged)
         VerticalBorderAddon vbAddon = getVerticalBorderAddon();
-        vbAddon.getBarrierManager().updateBorderLocation(island, data, oldCenterX, oldCenterZ, oldRange)
-            .thenRun(() -> {
-                // Update stored location data
-                data.updateLocation(newCenterX, newCenterZ, newRange);
-                vbAddon.getDataManager().saveData(data);
+        vbAddon.getBarrierManager().removeBordersForIsland(island, data);
+        vbAddon.getBarrierManager().createBordersForIsland(island, data);
 
-                // Send success message (on main thread)
-                vbAddon.getPlugin().getServer().getScheduler().runTask(vbAddon.getPlugin(), () -> {
-                    user.sendMessage("verticalborder.admin.update.success",
-                        "[x]", String.valueOf(newCenterX),
-                        "[z]", String.valueOf(newCenterZ),
-                        TextVariables.NAME, args.get(0));
-                });
-            })
-            .exceptionally(ex -> {
-                // Send error message (on main thread)
-                vbAddon.getPlugin().getServer().getScheduler().runTask(vbAddon.getPlugin(), () -> {
-                    user.sendMessage("verticalborder.admin.update.error");
-                });
-                return null;
-            });
+        // Update stored location data
+        data.updateLocation(newCenterX, newCenterZ, newRange);
+        vbAddon.getDataManager().saveData(data);
+
+        user.sendMessage("verticalborder.admin.update.success",
+            "[x]", String.valueOf(newCenterX),
+            "[z]", String.valueOf(newCenterZ),
+            TextVariables.NAME, args.get(0));
 
         return true;
     }

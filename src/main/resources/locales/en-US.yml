@@ -59,7 +59,7 @@ verticalborder:
       parameters: "<player>"
       border-disabled: "&cThe vertical border is disabled for this island."
       no-old-location: "&eNo previous location data found. Placing barriers at current location."
-      no-change: "&eThe island location has not changed. No update needed."
+      refreshing: "&7Refreshing border barriers at (&e[x], [z]&7) for [name]'s island..."
       updating: "&7Updating border for [name]'s island from (&e[old_x], [old_z]&7) to (&a[new_x], [new_z]&7)..."
       placed-new: "&aPlaced barriers at current location (&e[x], [z]&a) for [name]'s island."
       success: "&aSuccessfully updated border location to (&e[x], [z]&a) for [name]'s island."
