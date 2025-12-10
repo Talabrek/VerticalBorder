@@ -124,18 +124,27 @@ public class UpdateCommand extends CompositeCommand {
         }
 
         // Remove old barriers and place new ones (always refresh, even if location unchanged)
+        // Wait for removal to complete before placing new barriers to avoid race conditions
         VerticalBorderAddon vbAddon = getVerticalBorderAddon();
-        vbAddon.getBarrierManager().removeBordersForIsland(island, data);
-        vbAddon.getBarrierManager().createBordersForIsland(island, data);
+        String playerName = args.get(0);
 
-        // Update stored location data
-        data.updateLocation(newCenterX, newCenterZ, newRange);
-        vbAddon.getDataManager().saveData(data);
+        vbAddon.getBarrierManager().removeBordersForIsland(island, data)
+            .thenCompose(v -> vbAddon.getBarrierManager().createBordersForIsland(island, data))
+            .thenRun(() -> {
+                // Update stored location data after barriers are placed
+                data.updateLocation(newCenterX, newCenterZ, newRange);
+                vbAddon.getDataManager().saveData(data);
 
-        user.sendMessage("verticalborder.admin.update.success",
-            "[x]", String.valueOf(newCenterX),
-            "[z]", String.valueOf(newCenterZ),
-            TextVariables.NAME, args.get(0));
+                user.sendMessage("verticalborder.admin.update.success",
+                    "[x]", String.valueOf(newCenterX),
+                    "[z]", String.valueOf(newCenterZ),
+                    TextVariables.NAME, playerName);
+            })
+            .exceptionally(ex -> {
+                vbAddon.logError("Error updating barriers: " + ex.getMessage());
+                user.sendMessage("verticalborder.admin.update.error");
+                return null;
+            });
 
         return true;
     }

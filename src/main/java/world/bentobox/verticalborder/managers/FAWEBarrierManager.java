@@ -237,14 +237,15 @@ public class FAWEBarrierManager {
      * with barrier blocks to prevent access and mob spawning.
      * @param island The island to create barriers for
      * @param data The border data for the island
+     * @return CompletableFuture that completes when creation is done
      */
-    public void createBordersForIsland(Island island, BorderIslandData data) {
+    public CompletableFuture<Void> createBordersForIsland(Island island, BorderIslandData data) {
         if (!addon.isFaweEnabled() || !addon.getSettings().isPlaceBarrierBlocks()) {
-            return;
+            return CompletableFuture.completedFuture(null);
         }
 
         if (!data.isBorderEnabled()) {
-            return;
+            return CompletableFuture.completedFuture(null);
         }
 
         World world = island.getWorld();
@@ -260,25 +261,33 @@ public class FAWEBarrierManager {
         int worldMinY = world.getMinHeight();
         int worldMaxY = world.getMaxHeight() - 1;
 
+        CompletableFuture<Integer> ceilingFuture = CompletableFuture.completedFuture(0);
+        CompletableFuture<Integer> floorFuture = CompletableFuture.completedFuture(0);
+
         // Fill volume above the ceiling (from topY to world max)
         if (data.isCeilingEnabled()) {
-            fillVolumeWithBarriers(world, minX, maxX, data.getTopY(), worldMaxY, minZ, maxZ)
-                .thenAccept(count -> {
+            ceilingFuture = fillVolumeWithBarriers(world, minX, maxX, data.getTopY(), worldMaxY, minZ, maxZ)
+                .thenApply(count -> {
                     if (count > 0) {
                         addon.log("Placed " + count + " ceiling barriers for island " + island.getUniqueId());
                     }
+                    return count;
                 });
         }
 
         // Fill volume below the floor (from world min to bottomY)
         if (data.isFloorEnabled()) {
-            fillVolumeWithBarriers(world, minX, maxX, worldMinY, data.getBottomY(), minZ, maxZ)
-                .thenAccept(count -> {
+            floorFuture = fillVolumeWithBarriers(world, minX, maxX, worldMinY, data.getBottomY(), minZ, maxZ)
+                .thenApply(count -> {
                     if (count > 0) {
                         addon.log("Placed " + count + " floor barriers for island " + island.getUniqueId());
                     }
+                    return count;
                 });
         }
+
+        // Return a future that completes when both operations are done
+        return CompletableFuture.allOf(ceilingFuture, floorFuture);
     }
 
     /**
@@ -286,10 +295,11 @@ public class FAWEBarrierManager {
      * Removes all barrier blocks from the volumes above the ceiling and below the floor.
      * @param island The island to remove barriers from
      * @param data The border data for the island
+     * @return CompletableFuture that completes when removal is done
      */
-    public void removeBordersForIsland(Island island, BorderIslandData data) {
+    public CompletableFuture<Void> removeBordersForIsland(Island island, BorderIslandData data) {
         if (!addon.isFaweEnabled()) {
-            return;
+            return CompletableFuture.completedFuture(null);
         }
 
         World world = island.getWorld();
@@ -306,20 +316,25 @@ public class FAWEBarrierManager {
         int worldMaxY = world.getMaxHeight() - 1;
 
         // Remove ceiling barriers (from topY to world max)
-        removeBarriersFromVolume(world, minX, maxX, data.getTopY(), worldMaxY, minZ, maxZ)
-            .thenAccept(count -> {
+        CompletableFuture<Integer> ceilingFuture = removeBarriersFromVolume(world, minX, maxX, data.getTopY(), worldMaxY, minZ, maxZ)
+            .thenApply(count -> {
                 if (count > 0) {
                     addon.log("Removed " + count + " ceiling barriers for island " + island.getUniqueId());
                 }
+                return count;
             });
 
         // Remove floor barriers (from world min to bottomY)
-        removeBarriersFromVolume(world, minX, maxX, worldMinY, data.getBottomY(), minZ, maxZ)
-            .thenAccept(count -> {
+        CompletableFuture<Integer> floorFuture = removeBarriersFromVolume(world, minX, maxX, worldMinY, data.getBottomY(), minZ, maxZ)
+            .thenApply(count -> {
                 if (count > 0) {
                     addon.log("Removed " + count + " floor barriers for island " + island.getUniqueId());
                 }
+                return count;
             });
+
+        // Return a future that completes when both operations are done
+        return CompletableFuture.allOf(ceilingFuture, floorFuture);
     }
 
     /**

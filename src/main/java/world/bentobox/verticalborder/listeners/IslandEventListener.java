@@ -91,12 +91,6 @@ public class IslandEventListener implements Listener {
         Island island = event.getIsland();
         String islandId = island.getUniqueId();
 
-        // Get old data if it exists to remove old barriers
-        BorderIslandData oldData = addon.getDataManager().getDataById(islandId);
-        if (oldData != null) {
-            addon.getBarrierManager().removeBordersForIsland(island, oldData);
-        }
-
         // Create new border data with defaults from config
         BorderIslandData newData = new BorderIslandData(
             islandId,
@@ -113,12 +107,22 @@ public class IslandEventListener implements Listener {
             island.getProtectionRange()
         );
 
-        // Save the new data
-        addon.getDataManager().saveData(newData);
-
-        // Place new barriers
-        addon.getBarrierManager().createBordersForIsland(island, newData);
-
-        addon.log("Reset vertical border for island: " + islandId);
+        // Get old data if it exists to remove old barriers
+        BorderIslandData oldData = addon.getDataManager().getDataById(islandId);
+        if (oldData != null) {
+            // Wait for removal to complete before placing new barriers
+            addon.getBarrierManager().removeBordersForIsland(island, oldData)
+                .thenCompose(v -> {
+                    // Save the new data and place new barriers
+                    addon.getDataManager().saveData(newData);
+                    return addon.getBarrierManager().createBordersForIsland(island, newData);
+                })
+                .thenRun(() -> addon.log("Reset vertical border for island: " + islandId));
+        } else {
+            // No old data, just save and create new barriers
+            addon.getDataManager().saveData(newData);
+            addon.getBarrierManager().createBordersForIsland(island, newData)
+                .thenRun(() -> addon.log("Reset vertical border for island: " + islandId));
+        }
     }
 }
